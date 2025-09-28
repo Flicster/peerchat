@@ -158,8 +158,14 @@ func (ui *UI) startEventHandler() {
 		select {
 
 		case msg := <-ui.MsgInputs:
-			ui.Outbound <- msg
-			ui.displaySelfMessage(msg)
+			m := model.ChatMessage{
+				Message:    msg,
+				SenderID:   ui.ChatRoom.peerId.Pretty(),
+				SenderName: ui.ChatRoom.UserName,
+				CreatedAt:  time.Now(),
+			}
+			ui.Outbound <- m
+			ui.displaySelfMessage(m)
 		case cmd := <-ui.CmdInputs:
 			go ui.handleCommand(cmd)
 		case msg := <-ui.Inbound:
@@ -221,9 +227,9 @@ func (ui *UI) displayChatMessage(msg model.ChatMessage) {
 }
 
 // displaySelfMessage displays a message recieved from self
-func (ui *UI) displaySelfMessage(msg string) {
-	prompt := fmt.Sprintf("[lightslategrey]%s[-] [blue]<%s>:[-]", time.Now().Format(time.TimeOnly), ui.UserName)
-	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, msg)
+func (ui *UI) displaySelfMessage(msg model.ChatMessage) {
+	prompt := fmt.Sprintf("[lightslategrey]%s[-] [blue]<%s>:[-]", msg.CreatedAt.Format(time.TimeOnly), ui.UserName)
+	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, msg.Message)
 }
 
 // displayLogMessage displays a log message

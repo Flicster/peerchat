@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/Flicster/peerchat/internal/app/model"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -24,7 +23,7 @@ type chatlog struct {
 type ChatRoom struct {
 	Host     *P2P
 	Inbound  chan model.ChatMessage
-	Outbound chan string
+	Outbound chan model.ChatMessage
 	Logs     chan chatlog
 	RoomName string
 	UserName string
@@ -58,7 +57,7 @@ func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) 
 	chatroom := &ChatRoom{
 		Host:     p2phost,
 		Inbound:  make(chan model.ChatMessage),
-		Outbound: make(chan string),
+		Outbound: make(chan model.ChatMessage),
 		Logs:     make(chan chatlog),
 
 		ctx:    pubsubctx,
@@ -86,14 +85,7 @@ func (cr *ChatRoom) PubLoop() {
 			return
 
 		case message := <-cr.Outbound:
-			m := model.ChatMessage{
-				Message:    message,
-				SenderID:   cr.peerId.Pretty(),
-				SenderName: cr.UserName,
-				CreatedAt:  time.Now(),
-			}
-
-			messagebytes, err := json.Marshal(m)
+			messagebytes, err := json.Marshal(message)
 			if err != nil {
 				cr.Logs <- chatlog{logPrefix: "puberr", logMsg: "could not marshal JSON"}
 				continue
