@@ -82,9 +82,6 @@ func main() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	logrus.Infof("Joined the '%s' chatroom as '%s'", chatapp.RoomName, chatapp.UserName)
-
-	time.Sleep(time.Second * 5)
 
 	ui := service.NewUI(chatapp)
 	if err := ui.Run(); err != nil {

@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Flicster/peerchat/internal/app/model"
@@ -247,8 +248,10 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 				return
 			}
 
+			mu := sync.Mutex{}
+			mu.Lock()
 			ui.ChatRoom = newchatroom
-			time.Sleep(time.Second * 1)
+			mu.Unlock()
 
 			oldchatroom.Exit()
 

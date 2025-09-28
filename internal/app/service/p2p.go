@@ -78,7 +78,6 @@ func NewP2P() *P2P {
 func (p2p *P2P) AdvertiseConnect() {
 	ttl, err := p2p.Discovery.Advertise(p2p.Ctx, service)
 	logrus.Debugln("Advertised the PeerChat Service.")
-	time.Sleep(time.Second * 5)
 	logrus.Debugf("Service Time-to-Live is %s", ttl)
 
 	peerchan, err := p2p.Discovery.FindPeers(p2p.Ctx, service)
@@ -109,7 +108,6 @@ func (p2p *P2P) AnnounceConnect() {
 		}).Fatalln("Failed to Announce Service CID!")
 	}
 	logrus.Debugln("Announced the PeerChat Service.")
-	time.Sleep(time.Second * 5)
 
 	peerchan := p2p.KadDHT.FindProvidersAsync(p2p.Ctx, cidvalue, 0)
 	logrus.Traceln("Discovered PeerChat Service Peers.")
