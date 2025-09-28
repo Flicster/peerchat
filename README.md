@@ -75,7 +75,7 @@ When the **PeerChat** application is invoked without any flags, it joins the *lo
 
 The following starts the application and joins the *mychatroom* chat room as a user named *manish*.
 ```
-peerchat -user manish -room mychatroom
+peerchat -user hero -room mychatroom
 ```
 
 The method of peer discovery method can be modified using the ``-discover`` flag. Valid values are *announce* and *advertise*. The application defaults to the *advertise*. This value should only changed if peer connections aren't being established with the default method.
