@@ -41,3 +41,16 @@ build-linux:
 build-all: build-windows build-darwin build-linux
 	@echo Cross Compiled PeerChat for all platforms
 
+.PHONY: dep
+dep: ## Install dependencies
+	$(eval PACKAGE := $(shell go list -m))
+	@go mod tidy
+	@go mod vendor
+
+.PHONY: lint
+lint:
+	golangci-lint run --out-format code-climate ./...
+
+test:
+	go clean -testcache
+	go test -race ./...

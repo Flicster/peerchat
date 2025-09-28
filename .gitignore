@@ -8,3 +8,9 @@
 /.vscode
 .idea/
 /bin
+/vendor/
+/build/
+
+.env
+.golangci.yml
+.DS_Store
