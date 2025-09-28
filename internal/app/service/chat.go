@@ -53,14 +53,14 @@ func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) 
 		room = defaultRoom
 	}
 
-	pubsubctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	chatroom := &ChatRoom{
 		Host:     p2phost,
 		Inbound:  make(chan model.ChatMessage),
 		Outbound: make(chan model.ChatMessage),
 		Logs:     make(chan chatlog),
 
-		ctx:    pubsubctx,
+		ctx:    ctx,
 		cancel: cancel,
 		topic:  topic,
 		sub:    sub,
@@ -100,9 +100,9 @@ func (cr *ChatRoom) PubLoop() {
 	}
 }
 
-// SubLoop continously reads from the subscription
+// SubLoop continuously reads from the subscription
 // until either the subscription or pubsub context closes.
-// The recieved message is parsed sent into the inbound channel
+// The received message is parsed sent into the inbound channel
 func (cr *ChatRoom) SubLoop() {
 	for {
 		select {

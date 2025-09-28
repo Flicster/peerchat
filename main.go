@@ -66,7 +66,10 @@ func main() {
 	fmt.Println()
 
 	p2phost := service.NewP2P()
-	logrus.Infoln("Completed P2P Setup")
+	logrus.Debugln("Completed P2P Setup")
+
+	fmt.Println("Completed P2P Setup.")
+	fmt.Println("Connecting to Service Peers...")
 
 	switch *discovery {
 	case "announce":
@@ -76,7 +79,6 @@ func main() {
 	default:
 		p2phost.AdvertiseConnect()
 	}
-	logrus.Infoln("Connected to Service Peers")
 
 	chatapp, err := service.NewChatRoom(p2phost, *username, *chatroom)
 	if err != nil {
@@ -84,7 +86,7 @@ func main() {
 	}
 
 	ui := service.NewUI(chatapp)
-	if err := ui.Run(); err != nil {
+	if err = ui.Run(); err != nil {
 		logrus.Fatal(err)
 	}
 }

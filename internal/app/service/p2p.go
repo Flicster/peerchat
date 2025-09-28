@@ -94,7 +94,7 @@ func (p2p *P2P) AdvertiseConnect() {
 
 // AnnounceConnect connects to service peers.
 // This method uses the Provide() functionality of the Kademlia DHT directly to announce
-// the ability to provide the service and then disovers all peers that provide the same.
+// the ability to provide the service and then discovers all peers that provide the same.
 // The peer discovery is handled by a go-routine that will read from a channel
 // of peer address information until the peer channel closes
 func (p2p *P2P) AnnounceConnect() {
@@ -246,7 +246,7 @@ func bootstrapDHT(ctx context.Context, nodehost host.Host, kaddht *dht.IpfsDHT) 
 	logrus.Debugf("Connected to %d out of %d Bootstrap Peers.", connectedbootpeers, totalbootpeers)
 }
 
-// handlePeerDiscovery connects the given host to all peers recieved from a
+// handlePeerDiscovery connects the given host to all peers received from a
 // channel of peer address information. Meant to be started as a go routine.
 func handlePeerDiscovery(nodehost host.Host, peerchan <-chan peer.AddrInfo) {
 	for peer := range peerchan {
@@ -259,7 +259,7 @@ func handlePeerDiscovery(nodehost host.Host, peerchan <-chan peer.AddrInfo) {
 
 // generateCID generates a CID object for a given string and returns it.
 // Uses SHA256 to hash the string and generate a multihash from it.
-// The mulithash is then base58 encoded and then used to create the CID
+// The multihash is then base58 encoded and then used to create the CID
 func generateCID(namestring string) cid.Cid {
 	hash := sha256.Sum256([]byte(namestring))
 	finalhash := append([]byte{0x12, 0x20}, hash[:]...)
