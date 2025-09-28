@@ -3,13 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"github.com/Flicster/peerchat/internal"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/src-d/go-log.v1"
 )
 
 const figlet = `
