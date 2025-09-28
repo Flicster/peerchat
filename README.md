@@ -1,10 +1,9 @@
 # PeerChat
-![Banner](banner.png)
 ### A terminal-based P2P chat application using libp2p and Golang that uses a Kademlia DHT and the IPFS network for peer discovery and routing
 
-**Version: 1.1.0**  
+**Version: 1.0.0**  
 **Platform: Windows, Mac OSX and Linux**  
-**Language: Go 1.16**   
+**Language: Go 1.23**   
 **License: MIT**
 
 ## Overview
@@ -51,7 +50,7 @@ The **PeerChat** applcation can be installed in one of two ways.
     ```
 
 2. **With Go**
-    - This method requires Go v1.16 or greater installed on the target system. [Install Go](https://golang.org/doc/install)
+    - This method requires Go v1.23 or greater installed on the target system. [Install Go](https://golang.org/doc/install)
     - This method also uses the ``make`` command, which is built in for Linux and can be installed on Windows using ``choco install make``.
     - Clone the **PeerChat** Repository from [here](https://github.com/manishmeganathan/peerchat) using Git and CD into it.
     ```
