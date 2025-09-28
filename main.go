@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Flicster/peerchat/internal"
+	"github.com/Flicster/peerchat/internal/app/service"
 	"github.com/sirupsen/logrus"
 )
 
@@ -65,7 +65,7 @@ func main() {
 	fmt.Println("This may take upto 30 seconds.")
 	fmt.Println()
 
-	p2phost := internal.NewP2P()
+	p2phost := service.NewP2P()
 	logrus.Infoln("Completed P2P Setup")
 
 	switch *discovery {
@@ -78,12 +78,15 @@ func main() {
 	}
 	logrus.Infoln("Connected to Service Peers")
 
-	chatapp, _ := internal.NewChatRoom(p2phost, *username, *chatroom)
+	chatapp, err := service.NewChatRoom(p2phost, *username, *chatroom)
+	if err != nil {
+		logrus.Fatal(err)
+	}
 	logrus.Infof("Joined the '%s' chatroom as '%s'", chatapp.RoomName, chatapp.UserName)
 
 	time.Sleep(time.Second * 5)
 
-	ui := internal.NewUI(chatapp)
+	ui := service.NewUI(chatapp)
 	if err := ui.Run(); err != nil {
 		logrus.Fatal(err)
 	}

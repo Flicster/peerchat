@@ -1,4 +1,4 @@
-package internal
+package service
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Flicster/peerchat/internal/app/model"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
@@ -15,13 +16,6 @@ const (
 	defaultRoom = "lobby"
 )
 
-type chatMessage struct {
-	Message    string    `json:"message"`
-	SenderID   string    `json:"senderId"`
-	SenderName string    `json:"senderName"`
-	CreatedAt  time.Time `json:"createdAt"`
-}
-
 type chatlog struct {
 	logPrefix string
 	logMsg    string
@@ -29,7 +23,7 @@ type chatlog struct {
 
 type ChatRoom struct {
 	Host     *P2P
-	Inbound  chan chatMessage
+	Inbound  chan model.ChatMessage
 	Outbound chan string
 	Logs     chan chatlog
 	RoomName string
@@ -45,12 +39,12 @@ type ChatRoom struct {
 func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) {
 	topic, err := p2phost.PubSub.Join(fmt.Sprintf("room-peerchat-%s", room))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("join pub sub: %w", err)
 	}
 
 	sub, err := topic.Subscribe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("subscribe room: %w", err)
 	}
 
 	if username == "" {
@@ -62,9 +56,8 @@ func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) 
 
 	pubsubctx, cancel := context.WithCancel(context.Background())
 	chatroom := &ChatRoom{
-		Host: p2phost,
-
-		Inbound:  make(chan chatMessage),
+		Host:     p2phost,
+		Inbound:  make(chan model.ChatMessage),
 		Outbound: make(chan string),
 		Logs:     make(chan chatlog),
 
@@ -93,7 +86,7 @@ func (cr *ChatRoom) PubLoop() {
 			return
 
 		case message := <-cr.Outbound:
-			m := chatMessage{
+			m := model.ChatMessage{
 				Message:    message,
 				SenderID:   cr.peerId.Pretty(),
 				SenderName: cr.UserName,
@@ -134,7 +127,7 @@ func (cr *ChatRoom) SubLoop() {
 			if message.ReceivedFrom == cr.peerId {
 				continue
 			}
-			cm := &chatMessage{}
+			cm := &model.ChatMessage{}
 			err = json.Unmarshal(message.Data, cm)
 			if err != nil {
 				cr.Logs <- chatlog{logPrefix: "suberr", logMsg: "could not unmarshal JSON"}

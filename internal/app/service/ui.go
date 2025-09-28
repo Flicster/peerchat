@@ -1,10 +1,11 @@
-package internal
+package service
 
 import (
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/Flicster/peerchat/internal/app/model"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -214,7 +215,7 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 }
 
 // displayChatMessage displays a message recieved from a peer
-func (ui *UI) displayChatMessage(msg chatMessage) {
+func (ui *UI) displayChatMessage(msg model.ChatMessage) {
 	prompt := fmt.Sprintf("[lightslategrey]%s[-] [green]<%s>:[-]", msg.CreatedAt.Format(time.TimeOnly), msg.SenderName)
 	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, msg.Message)
 }
