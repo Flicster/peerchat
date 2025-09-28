@@ -28,7 +28,6 @@ import (
 
 const service = "peerchat"
 
-// P2P structure represents a P2P Host
 type P2P struct {
 	Ctx       context.Context
 	Host      host.Host

@@ -78,7 +78,7 @@ func main() {
 	}
 	logrus.Infoln("Connected to Service Peers")
 
-	chatapp, _ := internal.JoinChatRoom(p2phost, *username, *chatroom)
+	chatapp, _ := internal.NewChatRoom(p2phost, *username, *chatroom)
 	logrus.Infof("Joined the '%s' chatroom as '%s'", chatapp.RoomName, chatapp.UserName)
 
 	time.Sleep(time.Second * 5)

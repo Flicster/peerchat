@@ -9,206 +9,150 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
-// Represents the default fallback room and user names
-// if they aren't provided when the app is started
-const defaultuser = "incognito"
-const defaultroom = "lobby"
+const (
+	defaultUser = "incognito"
+	defaultRoom = "lobby"
+)
 
-// A structure that represents a PubSub Chat Room
-type ChatRoom struct {
-	// Represents the P2P Host for the ChatRoom
-	Host *P2P
-
-	// Represents the channel of incoming messages
-	Inbound chan chatmessage
-	// Represents the channel of outgoing messages
-	Outbound chan string
-	// Represents the channel of chat log messages
-	Logs chan chatlog
-
-	// Represents the name of the chat room
-	RoomName string
-	// Represent the name of the user in the chat room
-	UserName string
-	// Represents the host ID of the peer
-	selfid peer.ID
-
-	// Represents the chat room lifecycle context
-	psctx context.Context
-	// Represents the chat room lifecycle cancellation function
-	pscancel context.CancelFunc
-	// Represents the PubSub Topic of the ChatRoom
-	pstopic *pubsub.Topic
-	// Represents the PubSub Subscription for the topic
-	psub *pubsub.Subscription
-}
-
-// A structure that represents a chat message
-type chatmessage struct {
+type chatMessage struct {
 	Message    string `json:"message"`
-	SenderID   string `json:"senderid"`
-	SenderName string `json:"sendername"`
+	SenderID   string `json:"senderId"`
+	SenderName string `json:"senderName"`
 }
 
-// A structure that represents a chat log
 type chatlog struct {
-	logprefix string
-	logmsg    string
+	logPrefix string
+	logMsg    string
 }
 
-// A constructor function that generates and returns a new
-// ChatRoom for a given P2PHost, username and roomname
-func JoinChatRoom(p2phost *P2P, username string, roomname string) (*ChatRoom, error) {
+type ChatRoom struct {
+	Host     *P2P
+	Inbound  chan chatMessage
+	Outbound chan string
+	Logs     chan chatlog
+	RoomName string
+	UserName string
 
-	// Create a PubSub topic with the room name
-	topic, err := p2phost.PubSub.Join(fmt.Sprintf("room-peerchat-%s", roomname))
-	// Check the error
+	peerId peer.ID
+	ctx    context.Context
+	cancel context.CancelFunc
+	topic  *pubsub.Topic
+	sub    *pubsub.Subscription
+}
+
+func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) {
+	topic, err := p2phost.PubSub.Join(fmt.Sprintf("room-peerchat-%s", room))
 	if err != nil {
 		return nil, err
 	}
 
-	// Subscribe to the PubSub topic
 	sub, err := topic.Subscribe()
-	// Check the error
 	if err != nil {
 		return nil, err
 	}
 
-	// Check the provided username
 	if username == "" {
-		// Use the default user name
-		username = defaultuser
+		username = defaultUser
+	}
+	if room == "" {
+		room = defaultRoom
 	}
 
-	// Check the provided roomname
-	if roomname == "" {
-		// Use the default room name
-		roomname = defaultroom
-	}
-
-	// Create cancellable context
 	pubsubctx, cancel := context.WithCancel(context.Background())
-
-	// Create a ChatRoom object
 	chatroom := &ChatRoom{
 		Host: p2phost,
 
-		Inbound:  make(chan chatmessage),
+		Inbound:  make(chan chatMessage),
 		Outbound: make(chan string),
 		Logs:     make(chan chatlog),
 
-		psctx:    pubsubctx,
-		pscancel: cancel,
-		pstopic:  topic,
-		psub:     sub,
+		ctx:    pubsubctx,
+		cancel: cancel,
+		topic:  topic,
+		sub:    sub,
 
-		RoomName: roomname,
+		RoomName: room,
 		UserName: username,
-		selfid:   p2phost.Host.ID(),
+		peerId:   p2phost.Host.ID(),
 	}
 
-	// Start the subscribe loop
 	go chatroom.SubLoop()
-	// Start the publish loop
 	go chatroom.PubLoop()
 
-	// Return the chatroom
 	return chatroom, nil
 }
 
-// A method of ChatRoom that publishes a chatmessage
+// PubLoop publishes a chatMessage
 // to the PubSub topic until the pubsub context closes
 func (cr *ChatRoom) PubLoop() {
 	for {
 		select {
-		case <-cr.psctx.Done():
+		case <-cr.ctx.Done():
 			return
 
 		case message := <-cr.Outbound:
-			// Create a ChatMessage
-			m := chatmessage{
+			m := chatMessage{
 				Message:    message,
-				SenderID:   cr.selfid.Pretty(),
+				SenderID:   cr.peerId.Pretty(),
 				SenderName: cr.UserName,
 			}
 
-			// Marshal the ChatMessage into a JSON
 			messagebytes, err := json.Marshal(m)
 			if err != nil {
-				cr.Logs <- chatlog{logprefix: "puberr", logmsg: "could not marshal JSON"}
+				cr.Logs <- chatlog{logPrefix: "puberr", logMsg: "could not marshal JSON"}
 				continue
 			}
 
-			// Publish the message to the topic
-			err = cr.pstopic.Publish(cr.psctx, messagebytes)
+			err = cr.topic.Publish(cr.ctx, messagebytes)
 			if err != nil {
-				cr.Logs <- chatlog{logprefix: "puberr", logmsg: "could not publish to topic"}
+				cr.Logs <- chatlog{logPrefix: "puberr", logMsg: "could not publish to topic"}
 				continue
 			}
 		}
 	}
 }
 
-// A method of ChatRoom that continously reads from the subscription
+// SubLoop continously reads from the subscription
 // until either the subscription or pubsub context closes.
 // The recieved message is parsed sent into the inbound channel
 func (cr *ChatRoom) SubLoop() {
-	// Start loop
 	for {
 		select {
-		case <-cr.psctx.Done():
+		case <-cr.ctx.Done():
 			return
 
 		default:
-			// Read a message from the subscription
-			message, err := cr.psub.Next(cr.psctx)
-			// Check error
+			message, err := cr.sub.Next(cr.ctx)
 			if err != nil {
-				// Close the messages queue (subscription has closed)
 				close(cr.Inbound)
-				cr.Logs <- chatlog{logprefix: "suberr", logmsg: "subscription has closed"}
+				cr.Logs <- chatlog{logPrefix: "suberr", logMsg: "subscription has closed"}
 				return
 			}
-
-			// Check if message is from self
-			if message.ReceivedFrom == cr.selfid {
+			if message.ReceivedFrom == cr.peerId {
 				continue
 			}
-
-			// Declare a ChatMessage
-			cm := &chatmessage{}
-			// Unmarshal the message data into a ChatMessage
+			cm := &chatMessage{}
 			err = json.Unmarshal(message.Data, cm)
 			if err != nil {
-				cr.Logs <- chatlog{logprefix: "suberr", logmsg: "could not unmarshal JSON"}
+				cr.Logs <- chatlog{logPrefix: "suberr", logMsg: "could not unmarshal JSON"}
 				continue
 			}
-
-			// Send the ChatMessage into the message queue
 			cr.Inbound <- *cm
 		}
 	}
 }
 
-// A method of ChatRoom that returns a list
-// of all peer IDs connected to it
 func (cr *ChatRoom) PeerList() []peer.ID {
-	// Return the slice of peer IDs connected to chat room topic
-	return cr.pstopic.ListPeers()
+	return cr.topic.ListPeers()
 }
 
-// A method of ChatRoom that updates the chat
-// room by subscribing to the new topic
 func (cr *ChatRoom) Exit() {
-	defer cr.pscancel()
+	defer cr.cancel()
 
-	// Cancel the existing subscription
-	cr.psub.Cancel()
-	// Close the topic handler
-	cr.pstopic.Close()
+	cr.sub.Cancel()
+	_ = cr.topic.Close()
 }
 
-// A method of ChatRoom that updates the chat user name
 func (cr *ChatRoom) UpdateUser(username string) {
 	cr.UserName = username
 }
