@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -15,9 +16,10 @@ const (
 )
 
 type chatMessage struct {
-	Message    string `json:"message"`
-	SenderID   string `json:"senderId"`
-	SenderName string `json:"senderName"`
+	Message    string    `json:"message"`
+	SenderID   string    `json:"senderId"`
+	SenderName string    `json:"senderName"`
+	CreatedAt  time.Time `json:"createdAt"`
 }
 
 type chatlog struct {
@@ -95,6 +97,7 @@ func (cr *ChatRoom) PubLoop() {
 				Message:    message,
 				SenderID:   cr.peerId.Pretty(),
 				SenderName: cr.UserName,
+				CreatedAt:  time.Now(),
 			}
 
 			messagebytes, err := json.Marshal(m)

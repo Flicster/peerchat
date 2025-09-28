@@ -215,19 +215,19 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 
 // displayChatMessage displays a message recieved from a peer
 func (ui *UI) displayChatMessage(msg chatMessage) {
-	prompt := fmt.Sprintf("[green]<%s>:[-]", msg.SenderName)
+	prompt := fmt.Sprintf("[lightslategrey]%s[-] [green]<%s>:[-]", msg.CreatedAt.Format(time.TimeOnly), msg.SenderName)
 	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, msg.Message)
 }
 
 // displaySelfMessage displays a message recieved from self
 func (ui *UI) displaySelfMessage(msg string) {
-	prompt := fmt.Sprintf("[blue]<%s>:[-]", ui.UserName)
+	prompt := fmt.Sprintf("[lightslategrey]%s[-] [blue]<%s>:[-]", time.Now().Format(time.TimeOnly), ui.UserName)
 	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, msg)
 }
 
 // displayLogMessage displays a log message
 func (ui *UI) displayLogMessage(log chatlog) {
-	prompt := fmt.Sprintf("[yellow]<%s>:[-]", log.logPrefix)
+	prompt := fmt.Sprintf("[lightslategrey]%s[-] [yellow]<%s>:[-]", time.Now().Format(time.TimeOnly), log.logPrefix)
 	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, log.logMsg)
 }
 
