@@ -35,7 +35,7 @@ Note: Communcation between nodes on different private networks works only from *
 The **PeerChat** applcation can be installed in one of two ways.  
 1. **Without Go**
     - This method does not require a Go installation on the target system.
-    - Download the latest binary/executable for your system platform from the [releases](https://github.com/manishmeganathan/peerchat/releases)
+    - Download the latest binary/executable for your system platform from the [releases](https://github.com/Flicster/peerchat/releases)
     - Enter the directory where the binary is downlaoded 
     - Run the executable/binary  
 
@@ -52,9 +52,11 @@ The **PeerChat** applcation can be installed in one of two ways.
 2. **With Go**
     - This method requires Go v1.23 or greater installed on the target system. [Install Go](https://golang.org/doc/install)
     - This method also uses the ``make`` command, which is built in for Linux and can be installed on Windows using ``choco install make``.
-    - Clone the **PeerChat** Repository from [here](https://github.com/manishmeganathan/peerchat) using Git and CD into it.
+    - Clone the **PeerChat** Repository from [here](https://github.com/Flicster/peerchat) using Git and CD into it.
+
+    *With Clone*
     ```
-    git clone https://github.com/manishmeganathan/peerchat.git 
+    git clone https://github.com/Flicster/peerchat.git 
     cd peerchat
     ```
     - Run the install command on a linux based shell (Git Bash for Windows)
@@ -69,11 +71,18 @@ The **PeerChat** applcation can be installed in one of two ways.
     ```
     go run .
     ```
+    *Without Clone*
+    ```
+    go install github.com/Flicster/peerchat
+    ```
+    - The application is now installed into go's home directory into bin and can be invoked anywhere in the system.
+    ```
+    peerchat
 
 ## Usage
 When the **PeerChat** application is invoked without any flags, it joins the *lobby* chat room as a user named *newuser*. This can be modified by passing the ``-user`` and ``-room`` flags.
 
-The following starts the application and joins the *mychatroom* chat room as a user named *manish*.
+The following starts the application and joins the *mychatroom* chat room as a user named *hero*.
 ```
 peerchat -user hero -room mychatroom
 ```
