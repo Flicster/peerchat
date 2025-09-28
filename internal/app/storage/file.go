@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DefaultDirName = "/var/log/peerchat"
+	DefaultDirName = "/home/.peerchat"
 )
 
 type File struct {
@@ -19,12 +19,16 @@ type File struct {
 }
 
 func NewFile(filename string) (*File, error) {
-	filename += ".log"
-	if err := os.MkdirAll(DefaultDirName, 0755); err != nil {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("use home dir: %w", err)
+	}
+	appDir := filepath.Join(homeDir, ".peerchat")
+	if err = os.MkdirAll(appDir, 0755); err != nil {
 		return nil, fmt.Errorf("mkdir: %w", err)
 	}
-	filePath := filepath.Join(DefaultDirName, filename)
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile := filepath.Join(appDir, filename+".log")
+	file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("open file: %w", err)
 	}

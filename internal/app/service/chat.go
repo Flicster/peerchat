@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Flicster/peerchat/internal/app/model"
+	"github.com/Flicster/peerchat/internal/app/storage"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
@@ -28,11 +29,12 @@ type ChatRoom struct {
 	RoomName string
 	UserName string
 
-	peerId peer.ID
-	ctx    context.Context
-	cancel context.CancelFunc
-	topic  *pubsub.Topic
-	sub    *pubsub.Subscription
+	peerId  peer.ID
+	ctx     context.Context
+	cancel  context.CancelFunc
+	topic   *pubsub.Topic
+	sub     *pubsub.Subscription
+	storage *storage.File
 }
 
 func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) {
@@ -52,18 +54,21 @@ func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) 
 	if room == "" {
 		room = defaultRoom
 	}
-
+	stor, err := storage.NewFile(room)
+	if err != nil {
+		return nil, fmt.Errorf("create storage: %w", err)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	chatroom := &ChatRoom{
 		Host:     p2phost,
 		Inbound:  make(chan model.ChatMessage),
 		Outbound: make(chan model.ChatMessage),
 		Logs:     make(chan chatlog),
-
-		ctx:    ctx,
-		cancel: cancel,
-		topic:  topic,
-		sub:    sub,
+		ctx:      ctx,
+		cancel:   cancel,
+		topic:    topic,
+		sub:      sub,
+		storage:  stor,
 
 		RoomName: room,
 		UserName: username,
@@ -96,6 +101,7 @@ func (cr *ChatRoom) PubLoop() {
 				cr.Logs <- chatlog{logPrefix: "puberr", logMsg: "could not publish to topic"}
 				continue
 			}
+			_ = cr.storage.SaveMessage(string(messagebytes))
 		}
 	}
 }
@@ -136,7 +142,7 @@ func (cr *ChatRoom) PeerList() []peer.ID {
 
 func (cr *ChatRoom) Exit() {
 	defer cr.cancel()
-
+	_ = cr.storage.Close()
 	cr.sub.Cancel()
 	_ = cr.topic.Close()
 }
