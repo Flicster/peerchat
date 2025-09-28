@@ -75,7 +75,7 @@ The **PeerChat** applcation can be installed in one of two ways.
     ```
     go install github.com/Flicster/peerchat
     ```
-    - The application is now installed into go's home directory into bin and can be invoked anywhere in the system.
+    - The application is now installed into go's home directory into bin directory and can be invoked anywhere in the system.
     ```
     peerchat
 
