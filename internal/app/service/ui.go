@@ -88,8 +88,9 @@ func NewUI(cr *ChatRoom) *UI {
 				row, _ := messagebox.GetScrollOffset()
 				messagebox.ScrollTo(row+10, 0)
 				return nil
+			default:
+				return event
 			}
-			return event
 		})
 
 	usage := tview.NewTextView().
