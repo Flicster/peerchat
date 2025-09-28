@@ -94,3 +94,4 @@ The loglevel for the application startup runtime can be modified using the ``-lo
 
 ## Future Development
 - Encryption
+- Chat history
