@@ -93,8 +93,4 @@ The loglevel for the application startup runtime can be modified using the ``-lo
 
 
 ## Future Development
-- Support for QUIC and WebSocket transports
-- Migrate to Protocol Buffers instead of JSON for message encoding
-- Chat Room notification for when user changes names
-- Support for other PubSub routers (RandomSub, FloodSub and someday EpiSub)
-- Support for password protected Chat Rooms.
+- Encryption
