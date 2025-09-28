@@ -45,18 +45,52 @@ func NewUI(cr *ChatRoom) *UI {
 		SetBorder(true).
 		SetBorderColor(tcell.ColorGreen)
 
-	messagebox := tview.NewTextView().
+	messagebox := tview.NewTextView()
+	messagebox.
 		SetDynamicColors(true).
+		SetScrollable(true).
 		SetChangedFunc(func() {
 			app.Draw()
-		})
-
-	messagebox.
+			messagebox.ScrollToEnd()
+		}).
 		SetBorder(true).
 		SetBorderColor(tcell.ColorGreen).
 		SetTitle(fmt.Sprintf("ChatRoom-%s", cr.RoomName)).
 		SetTitleAlign(tview.AlignLeft).
-		SetTitleColor(tcell.ColorWhite)
+		SetTitleColor(tcell.ColorWhite).
+		SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			switch event.Key() {
+			case tcell.KeyUp:
+				row, _ := messagebox.GetScrollOffset()
+				if row > 0 {
+					messagebox.ScrollTo(row-1, 0)
+				}
+				return nil
+			case tcell.KeyDown:
+				row, _ := messagebox.GetScrollOffset()
+				messagebox.ScrollTo(row+1, 0)
+				return nil
+			case tcell.KeyHome:
+				messagebox.ScrollToBeginning()
+				return nil
+			case tcell.KeyEnd:
+				messagebox.ScrollToEnd()
+				return nil
+			case tcell.KeyPgUp:
+				row, _ := messagebox.GetScrollOffset()
+				if row > 10 {
+					messagebox.ScrollTo(row-10, 0)
+				} else {
+					messagebox.ScrollToBeginning()
+				}
+				return nil
+			case tcell.KeyPgDn:
+				row, _ := messagebox.GetScrollOffset()
+				messagebox.ScrollTo(row+10, 0)
+				return nil
+			}
+			return event
+		})
 
 	usage := tview.NewTextView().
 		SetDynamicColors(true).
@@ -120,11 +154,23 @@ func NewUI(cr *ChatRoom) *UI {
 	flex := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(titlebox, 3, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(messagebox, 0, 1, false).
+			AddItem(messagebox, 0, 1, false). // Убедитесь, что messagebox не в фокусе по умолчанию
 			AddItem(peerbox, 20, 1, false),
 			0, 8, false).
 		AddItem(input, 3, 1, true).
 		AddItem(usage, 3, 1, false)
+
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			if input.HasFocus() {
+				app.SetFocus(messagebox)
+			} else {
+				app.SetFocus(input)
+			}
+			return nil
+		}
+		return event
+	})
 
 	app.SetRoot(flex, true)
 
