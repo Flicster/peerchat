@@ -240,15 +240,16 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 			ui.Logs <- chatlog{logPrefix: "system", logMsg: "missing room name for command"}
 			return
 		} else if cmd.Arg == ui.RoomName {
-			ui.Logs <- chatlog{logPrefix: "system", logMsg: "you are currently in the room"}
 			return
 		} else {
-			ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("joining new room '%s'", cmd.Arg)}
+			ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("joining new room '%s'...", cmd.Arg)}
 			go ui.changeRoom(cmd.Arg)
 		}
 	case "/user":
 		if cmd.Arg == "" {
 			ui.Logs <- chatlog{logPrefix: "system", logMsg: "missing user name for command"}
+		} else if cmd.Arg == ui.ChatRoom.UserName {
+			return
 		} else {
 			ui.UpdateUser(cmd.Arg)
 			ui.inputBox.SetLabel(ui.UserName + " > ")
