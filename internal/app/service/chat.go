@@ -96,13 +96,13 @@ func (cr *ChatRoom) PubLoop() {
 		case message := <-cr.Outbound:
 			messagebytes, err := json.Marshal(message)
 			if err != nil {
-				cr.Logs <- chatlog{logPrefix: "puberr", logMsg: "could not marshal JSON"}
+				cr.Logs <- chatlog{logPrefix: "system", logMsg: "could not marshal JSON"}
 				continue
 			}
 
 			err = cr.topic.Publish(cr.ctx, messagebytes)
 			if err != nil {
-				cr.Logs <- chatlog{logPrefix: "puberr", logMsg: "could not publish to topic"}
+				cr.Logs <- chatlog{logPrefix: "system", logMsg: "could not publish to topic"}
 				continue
 			}
 			_ = cr.storage.SaveMessage(string(messagebytes))
@@ -123,16 +123,13 @@ func (cr *ChatRoom) SubLoop() {
 			message, err := cr.sub.Next(cr.ctx)
 			if err != nil {
 				close(cr.Inbound)
-				cr.Logs <- chatlog{logPrefix: "suberr", logMsg: "subscription has closed"}
+				cr.Logs <- chatlog{logPrefix: "system", logMsg: "subscription has closed"}
 				return
-			}
-			if message.ReceivedFrom == cr.peerId {
-				continue
 			}
 			cm := &model.ChatMessage{}
 			err = json.Unmarshal(message.Data, cm)
 			if err != nil {
-				cr.Logs <- chatlog{logPrefix: "suberr", logMsg: "could not unmarshal JSON"}
+				cr.Logs <- chatlog{logPrefix: "system", logMsg: "could not unmarshal JSON"}
 				continue
 			}
 			cr.Inbound <- *cm

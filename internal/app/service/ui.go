@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Flicster/peerchat/internal/app/model"
@@ -16,8 +15,8 @@ const (
 )
 
 type uiCommand struct {
-	cmdType string
-	cmdArg  string
+	Type string
+	Arg  string
 }
 
 type UI struct {
@@ -106,8 +105,10 @@ func NewUI(cr *ChatRoom) *UI {
 		SetTitleColor(tcell.ColorWhite).
 		SetBorderPadding(0, 0, 1, 0)
 
-	peerbox := tview.NewTextView()
-
+	peerbox := tview.NewTextView().
+		SetChangedFunc(func() {
+			app.Draw()
+		})
 	peerbox.
 		SetBorder(true).
 		SetBorderColor(tcell.ColorGreen).
@@ -144,7 +145,7 @@ func NewUI(cr *ChatRoom) *UI {
 				cmdparts = append(cmdparts, "")
 			}
 
-			cmdchan <- uiCommand{cmdType: cmdparts[0], cmdArg: cmdparts[1]}
+			cmdchan <- uiCommand{Type: cmdparts[0], Arg: cmdparts[1]}
 
 		} else {
 			msgchan <- line
@@ -188,23 +189,23 @@ func NewUI(cr *ChatRoom) *UI {
 }
 
 func (ui *UI) Run() error {
-	go ui.startEventHandler()
+	ui.displayHistory()
+	go ui.start()
 
 	defer ui.Close()
 	return ui.TerminalApp.Run()
 }
 
 func (ui *UI) Close() {
-	ui.cancel()
+	ui.ChatRoom.cancel()
 }
 
-func (ui *UI) startEventHandler() {
-	refreshticker := time.NewTicker(time.Second)
-	defer refreshticker.Stop()
+func (ui *UI) start() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
-
 		case msg := <-ui.MsgInputs:
 			m := model.ChatMessage{
 				Message:    msg,
@@ -213,71 +214,66 @@ func (ui *UI) startEventHandler() {
 				CreatedAt:  time.Now(),
 			}
 			ui.Outbound <- m
-			ui.displaySelfMessage(m)
 		case cmd := <-ui.CmdInputs:
-			go ui.handleCommand(cmd)
-		case msg := <-ui.Inbound:
-			ui.displayChatMessage(msg)
-		case log := <-ui.Logs:
+			ui.handleCommand(cmd)
+		case msg := <-ui.ChatRoom.Inbound:
+			ui.displayMessage(msg)
+		case log := <-ui.ChatRoom.Logs:
 			ui.displayLogMessage(log)
-		case <-refreshticker.C:
+		case <-ticker.C:
 			ui.syncPeerBox()
-		case <-ui.ctx.Done():
+		case <-ui.ChatRoom.ctx.Done():
 			return
 		}
 	}
 }
 
 func (ui *UI) handleCommand(cmd uiCommand) {
-	switch cmd.cmdType {
+	switch cmd.Type {
 	case "/quit":
 		ui.TerminalApp.Stop()
 		return
-
 	case "/clear":
 		ui.messageBox.Clear()
 	case "/room":
-		if cmd.cmdArg == "" {
-			ui.Logs <- chatlog{logPrefix: "badcmd", logMsg: "missing room name for command"}
+		if cmd.Arg == "" {
+			ui.Logs <- chatlog{logPrefix: "system", logMsg: "missing room name for command"}
+			return
+		} else if cmd.Arg == ui.RoomName {
+			ui.Logs <- chatlog{logPrefix: "system", logMsg: "you are currently in the room"}
+			return
 		} else {
-			ui.Logs <- chatlog{logPrefix: "roomchange", logMsg: fmt.Sprintf("joining new room '%s'", cmd.cmdArg)}
-			oldchatroom := ui.ChatRoom
-			newchatroom, err := NewChatRoom(ui.Host, ui.UserName, cmd.cmdArg)
-			if err != nil {
-				ui.Logs <- chatlog{logPrefix: "jumperr", logMsg: fmt.Sprintf("could not change chat room - %s", err)}
-				return
-			}
-
-			mu := sync.Mutex{}
-			mu.Lock()
-			ui.ChatRoom = newchatroom
-			mu.Unlock()
-
-			oldchatroom.Exit()
-
-			ui.messageBox.Clear()
-			ui.messageBox.SetTitle(fmt.Sprintf("ChatRoom-%s", ui.ChatRoom.RoomName))
+			ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("joining new room '%s'", cmd.Arg)}
+			go ui.changeRoom(cmd.Arg)
 		}
 	case "/user":
-		if cmd.cmdArg == "" {
-			ui.Logs <- chatlog{logPrefix: "badcmd", logMsg: "missing user name for command"}
+		if cmd.Arg == "" {
+			ui.Logs <- chatlog{logPrefix: "system", logMsg: "missing user name for command"}
 		} else {
-			ui.UpdateUser(cmd.cmdArg)
+			ui.UpdateUser(cmd.Arg)
 			ui.inputBox.SetLabel(ui.UserName + " > ")
 		}
 	default:
-		ui.Logs <- chatlog{logPrefix: "badcmd", logMsg: fmt.Sprintf("unsupported command - %s", cmd.cmdType)}
+		ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("unsupported command - %s", cmd.Type)}
+	}
+}
+
+func (ui *UI) displayMessage(msg model.ChatMessage) {
+	if msg.SenderName == ui.ChatRoom.UserName {
+		ui.displayOwnerMessage(msg)
+	} else {
+		ui.displayUserMessage(msg)
 	}
 }
 
 // displayChatMessage displays a message recieved from a peer
-func (ui *UI) displayChatMessage(msg model.ChatMessage) {
+func (ui *UI) displayUserMessage(msg model.ChatMessage) {
 	prompt := fmt.Sprintf("[lightslategrey]%s[-] [green]<%s>:[-]", msg.CreatedAt.Format(time.TimeOnly), msg.SenderName)
 	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, msg.Message)
 }
 
 // displaySelfMessage displays a message recieved from self
-func (ui *UI) displaySelfMessage(msg model.ChatMessage) {
+func (ui *UI) displayOwnerMessage(msg model.ChatMessage) {
 	prompt := fmt.Sprintf("[lightslategrey]%s[-] [blue]<%s>:[-]", msg.CreatedAt.Format(time.TimeOnly), ui.UserName)
 	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, msg.Message)
 }
@@ -297,10 +293,40 @@ func (ui *UI) syncPeerBox() {
 	ui.peerBox.Unlock()
 
 	for _, p := range peers {
-		peerid := p.Pretty()
-		peerid = peerid[len(peerid)-8:]
-		fmt.Fprintln(ui.peerBox, peerid)
+		peerId := p.Pretty()
+		if len(peerId) > 8 {
+			peerId = peerId[len(peerId)-8:]
+		}
+		fmt.Fprintln(ui.peerBox, peerId)
 	}
+}
 
-	ui.TerminalApp.Draw()
+func (ui *UI) changeRoom(roomName string) {
+	newChatRoom, err := NewChatRoom(ui.Host, ui.UserName, roomName)
+	if err != nil {
+		ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("could not change chat room - %s", err)}
+		return
+	}
+	ui.ChatRoom.Exit()
+
+	ui.bindChatRoom(newChatRoom)
+
+	ui.messageBox.Clear()
+	ui.messageBox.SetTitle(fmt.Sprintf("ChatRoom-%s", ui.ChatRoom.RoomName))
+	ui.displayHistory()
+}
+
+func (ui *UI) bindChatRoom(cr *ChatRoom) {
+	ui.ChatRoom = cr
+	go ui.start()
+}
+
+func (ui *UI) displayHistory() {
+	for _, msg := range ui.ChatRoom.History {
+		if msg.SenderName == ui.ChatRoom.UserName {
+			ui.displayOwnerMessage(msg)
+		} else {
+			ui.displayUserMessage(msg)
+		}
+	}
 }

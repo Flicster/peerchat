@@ -77,6 +77,11 @@ func NewP2P() *P2P {
 // of peer address information until the peer channel closes
 func (p2p *P2P) AdvertiseConnect() {
 	ttl, err := p2p.Discovery.Advertise(p2p.Ctx, service)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Fatalln("P2P Advertise Failed!")
+	}
 	logrus.Debugln("Advertised the PeerChat Service.")
 	logrus.Debugf("Service Time-to-Live is %s", ttl)
 
@@ -231,15 +236,15 @@ func bootstrapDHT(ctx context.Context, nodehost host.Host, kaddht *dht.IpfsDHT) 
 		peerinfo, _ := peer.AddrInfoFromP2pAddr(peeraddr)
 
 		wg.Add(1)
-		go func() {
+		go func(pi *peer.AddrInfo) {
 			defer wg.Done()
-			if err := nodehost.Connect(ctx, *peerinfo); err != nil {
+			if err := nodehost.Connect(ctx, *pi); err != nil {
 				totalbootpeers++
 			} else {
 				connectedbootpeers++
 				totalbootpeers++
 			}
-		}()
+		}(peerinfo)
 	}
 	wg.Wait()
 
