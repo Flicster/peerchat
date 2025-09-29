@@ -28,6 +28,7 @@ type ChatRoom struct {
 	Logs     chan chatlog
 	RoomName string
 	UserName string
+	History  []model.ChatMessage
 
 	peerId  peer.ID
 	ctx     context.Context
@@ -77,7 +78,10 @@ func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) 
 
 	go chatroom.SubLoop()
 	go chatroom.PubLoop()
-
+	err = chatroom.LoadHistory()
+	if err != nil {
+		return nil, fmt.Errorf("get history: %w", err)
+	}
 	return chatroom, nil
 }
 
@@ -138,6 +142,15 @@ func (cr *ChatRoom) SubLoop() {
 
 func (cr *ChatRoom) PeerList() []peer.ID {
 	return cr.topic.ListPeers()
+}
+
+func (cr *ChatRoom) LoadHistory() error {
+	var err error
+	cr.History, err = cr.storage.LoadMessages()
+	if err != nil {
+		return fmt.Errorf("load history: %w", err)
+	}
+	return nil
 }
 
 func (cr *ChatRoom) Exit() {
