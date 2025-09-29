@@ -140,6 +140,7 @@ func NewUI(cr *ChatRoom) *UI {
 			return
 		}
 
+		line = strings.ReplaceAll(line, "\\n", "\n")
 		if strings.HasPrefix(line, "/") {
 			cmdparts := strings.Split(line, " ")
 			if len(cmdparts) == 1 {
@@ -241,17 +242,17 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 		ui.messageBox.Clear()
 	case "/room":
 		if cmd.Arg == "" {
-			ui.Logs <- chatlog{logPrefix: "system", logMsg: "missing room name for command"}
+			ui.Logs <- model.LogMessage{Prefix: "system", Message: "missing room name for command"}
 			return
 		} else if cmd.Arg == ui.RoomName {
 			return
 		} else {
-			ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("joining new room <%s>...", cmd.Arg)}
+			ui.Logs <- model.LogMessage{Prefix: "system", Message: fmt.Sprintf("joining new room <%s>...", cmd.Arg)}
 			ui.changeRoom(cmd.Arg)
 		}
 	case "/user":
 		if cmd.Arg == "" {
-			ui.Logs <- chatlog{logPrefix: "system", logMsg: "missing user name for command"}
+			ui.Logs <- model.LogMessage{Prefix: "system", Message: "missing user name for command"}
 		} else if cmd.Arg == ui.ChatRoom.UserName {
 			return
 		} else {
@@ -259,7 +260,7 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 			ui.inputBox.SetLabel(ui.UserName + " > ")
 		}
 	default:
-		ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("unsupported command - %s", cmd.Type)}
+		ui.Logs <- model.LogMessage{Prefix: "system", Message: fmt.Sprintf("unsupported command - %s", cmd.Type)}
 	}
 }
 
@@ -273,20 +274,37 @@ func (ui *UI) displayMessage(msg model.ChatMessage) {
 
 // displayChatMessage displays a message recieved from a peer
 func (ui *UI) displayUserMessage(msg model.ChatMessage) {
-	prompt := fmt.Sprintf("[lightslategrey]%s[-] [green]<%s>:[-]", msg.CreatedAt.Format(time.TimeOnly), msg.SenderName)
-	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, msg.Message)
+	ui.printMessage(msg, "blue")
 }
 
 // displaySelfMessage displays a message recieved from self
 func (ui *UI) displayOwnerMessage(msg model.ChatMessage) {
-	prompt := fmt.Sprintf("[lightslategrey]%s[-] [blue]<%s>:[-]", msg.CreatedAt.Format(time.TimeOnly), ui.UserName)
-	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, msg.Message)
+	ui.printMessage(msg, "green")
 }
 
 // displayLogMessage displays a log message
-func (ui *UI) displayLogMessage(log chatlog) {
-	prompt := fmt.Sprintf("[lightslategrey]%s[-] [yellow]<%s>:[-]", time.Now().Format(time.TimeOnly), log.logPrefix)
-	fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, log.logMsg)
+func (ui *UI) displayLogMessage(log model.LogMessage) {
+	msg := model.ChatMessage{
+		Message:    log.Message,
+		SenderName: log.Prefix,
+		CreatedAt:  time.Now(),
+	}
+	ui.printMessage(msg, "yellow")
+}
+
+func (ui *UI) printMessage(msg model.ChatMessage, color string) {
+	t := msg.CreatedAt.Format(time.TimeOnly)
+	n := fmt.Sprintf("<%s>:", msg.SenderName)
+	prompt := fmt.Sprintf("[lightslategrey]%s[-] [%s]%s[-]", t, color, n)
+	lines := strings.Split(msg.Message, "\n")
+	for i, line := range lines {
+		if i == 0 {
+			fmt.Fprintf(ui.messageBox, "%s %s\n", prompt, line)
+		} else {
+			indent := strings.Repeat(" ", len(t)+len(n)+2)
+			fmt.Fprintf(ui.messageBox, "%s%s\n", indent, line)
+		}
+	}
 }
 
 // syncPeerBox refreshes the list of peers
@@ -309,7 +327,7 @@ func (ui *UI) syncPeerBox() {
 func (ui *UI) changeRoom(roomName string) {
 	newChatRoom, err := NewChatRoom(ui.Host, ui.UserName, roomName)
 	if err != nil {
-		ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("could not change chat room - %s", err)}
+		ui.Logs <- model.LogMessage{Prefix: "system", Message: fmt.Sprintf("could not change chat room - %s", err)}
 		return
 	}
 	oldChatRoom := ui.ChatRoom

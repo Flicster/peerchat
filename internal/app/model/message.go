@@ -8,3 +8,8 @@ type ChatMessage struct {
 	SenderName string    `json:"senderName"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
+
+type LogMessage struct {
+	Prefix  string `json:"prefix"`
+	Message string `json:"message"`
+}

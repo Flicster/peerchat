@@ -16,16 +16,11 @@ const (
 	defaultRoom = "lobby"
 )
 
-type chatlog struct {
-	logPrefix string
-	logMsg    string
-}
-
 type ChatRoom struct {
 	Host     *P2P
 	Inbound  chan model.ChatMessage
 	Outbound chan model.ChatMessage
-	Logs     chan chatlog
+	Logs     chan model.LogMessage
 	RoomName string
 	UserName string
 	History  []model.ChatMessage
@@ -64,7 +59,7 @@ func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) 
 		Host:     p2phost,
 		Inbound:  make(chan model.ChatMessage),
 		Outbound: make(chan model.ChatMessage),
-		Logs:     make(chan chatlog),
+		Logs:     make(chan model.LogMessage),
 		ctx:      ctx,
 		cancel:   cancel,
 		topic:    topic,
@@ -96,13 +91,13 @@ func (cr *ChatRoom) PubLoop() {
 		case message := <-cr.Outbound:
 			messagebytes, err := json.Marshal(message)
 			if err != nil {
-				cr.Logs <- chatlog{logPrefix: "system", logMsg: "could not marshal JSON"}
+				cr.Logs <- model.LogMessage{Prefix: "system", Message: "could not marshal JSON"}
 				continue
 			}
 
 			err = cr.topic.Publish(cr.ctx, messagebytes)
 			if err != nil {
-				cr.Logs <- chatlog{logPrefix: "system", logMsg: "could not publish to topic"}
+				cr.Logs <- model.LogMessage{Prefix: "system", Message: "could not publish to topic"}
 				continue
 			}
 			_ = cr.storage.SaveMessage(string(messagebytes))
@@ -123,13 +118,13 @@ func (cr *ChatRoom) SubLoop() {
 			message, err := cr.sub.Next(cr.ctx)
 			if err != nil {
 				close(cr.Inbound)
-				cr.Logs <- chatlog{logPrefix: "system", logMsg: "subscription has closed"}
+				cr.Logs <- model.LogMessage{Prefix: "system", Message: "subscription has closed"}
 				return
 			}
 			cm := &model.ChatMessage{}
 			err = json.Unmarshal(message.Data, cm)
 			if err != nil {
-				cr.Logs <- chatlog{logPrefix: "system", logMsg: "could not unmarshal JSON"}
+				cr.Logs <- model.LogMessage{Prefix: "system", Message: "could not unmarshal JSON"}
 				continue
 			}
 			cr.Inbound <- *cm
