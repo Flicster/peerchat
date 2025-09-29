@@ -8,6 +8,7 @@ import (
 	"github.com/Flicster/peerchat/internal/app/model"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -201,6 +202,11 @@ func (ui *UI) Close() {
 }
 
 func (ui *UI) start() {
+	defer func() {
+		if r := recover(); r != nil {
+			logrus.Warn("ui start recovered from panic: %v\n", r)
+		}
+	}()
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -215,15 +221,13 @@ func (ui *UI) start() {
 			}
 			ui.Outbound <- m
 		case cmd := <-ui.CmdInputs:
-			ui.handleCommand(cmd)
+			go ui.handleCommand(cmd)
 		case msg := <-ui.ChatRoom.Inbound:
 			ui.displayMessage(msg)
 		case log := <-ui.ChatRoom.Logs:
 			ui.displayLogMessage(log)
 		case <-ticker.C:
 			ui.syncPeerBox()
-		case <-ui.ChatRoom.ctx.Done():
-			return
 		}
 	}
 }
@@ -242,8 +246,8 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 		} else if cmd.Arg == ui.RoomName {
 			return
 		} else {
-			ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("joining new room '%s'...", cmd.Arg)}
-			go ui.changeRoom(cmd.Arg)
+			ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("joining new room <%s>...", cmd.Arg)}
+			ui.changeRoom(cmd.Arg)
 		}
 	case "/user":
 		if cmd.Arg == "" {
@@ -308,18 +312,15 @@ func (ui *UI) changeRoom(roomName string) {
 		ui.Logs <- chatlog{logPrefix: "system", logMsg: fmt.Sprintf("could not change chat room - %s", err)}
 		return
 	}
-	ui.ChatRoom.Exit()
-
-	ui.bindChatRoom(newChatRoom)
+	oldChatRoom := ui.ChatRoom
+	ui.ChatRoom = newChatRoom
+	time.Sleep(time.Second * 1)
 
 	ui.messageBox.Clear()
 	ui.messageBox.SetTitle(fmt.Sprintf("ChatRoom-%s", ui.ChatRoom.RoomName))
 	ui.displayHistory()
-}
 
-func (ui *UI) bindChatRoom(cr *ChatRoom) {
-	ui.ChatRoom = cr
-	go ui.start()
+	oldChatRoom.Exit()
 }
 
 func (ui *UI) displayHistory() {
