@@ -59,7 +59,7 @@ func NewP2P() (*P2P, error) {
 		return nil, fmt.Errorf("create dht: %w", err)
 	}
 	if err = kaddht.Bootstrap(ctx); err != nil {
-		logrus.WithError(err).Warn("dht bootstrap returned error")
+		return nil, fmt.Errorf("bootstrap kaddht: %w", err)
 	}
 	for _, addr := range dht.DefaultBootstrapPeers {
 		pi, _ := peer.AddrInfoFromP2pAddr(addr)
@@ -89,19 +89,25 @@ func NewP2P() (*P2P, error) {
 func (p *P2P) AdvertiseConnect() error {
 	ttl, err := p.Discovery.Advertise(p.Ctx, serviceName)
 	if err != nil {
-		return fmt.Errorf("advertise failed: %w", err)
+		return fmt.Errorf("discovery advertise: %w", err)
 	}
 	logrus.Debugf("advertised service %q (ttl=%s)", serviceName, ttl)
 
 	peerCh, err := p.Discovery.FindPeers(p.Ctx, serviceName)
 	if err != nil {
-		return fmt.Errorf("find peers failed: %w", err)
+		return fmt.Errorf("find peers: %w", err)
 	}
 	go handlePeerDiscovery(p.Host, peerCh)
 	return nil
 }
 
-// handlePeerDiscovery подключается ко всем найденным пирам.
+func (p *P2P) GetPeerID() peer.ID {
+	if p == nil || p.Host == nil {
+		return ""
+	}
+	return p.Host.ID()
+}
+
 func handlePeerDiscovery(node host.Host, peerCh <-chan peer.AddrInfo) {
 	for pi := range peerCh {
 		if pi.ID == node.ID() {
@@ -111,19 +117,8 @@ func handlePeerDiscovery(node host.Host, peerCh <-chan peer.AddrInfo) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			if err := node.Connect(ctx, pi); err != nil {
-				logrus.WithError(err).WithFields(logrus.Fields{
-					"peer": pi.ID.String(),
-				}).Debug("failed to connect peer")
-			} else {
-				logrus.WithField("peer", pi.ID.String()).Debug("connected peer")
+				logrus.WithError(err).WithFields(logrus.Fields{"peer": pi.ID.String()}).Debug("failed to connect peer")
 			}
 		}(pi)
 	}
-}
-
-func (p *P2P) GetPeerID() peer.ID {
-	if p == nil || p.Host == nil {
-		return ""
-	}
-	return p.Host.ID()
 }
