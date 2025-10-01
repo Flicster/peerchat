@@ -26,7 +26,6 @@ type P2P struct {
 	PubSub    *pubsub.PubSub
 }
 
-// NewP2P создает libp2p host, DHT, discovery и PubSub.
 func NewP2P() (*P2P, error) {
 	ctx := context.Background()
 
@@ -85,7 +84,6 @@ func NewP2P() (*P2P, error) {
 	}, nil
 }
 
-// AdvertiseConnect рекламирует сервис и подключается к найденным пирами.
 func (p *P2P) AdvertiseConnect() error {
 	ttl, err := p.Discovery.Advertise(p.Ctx, serviceName)
 	if err != nil {
