@@ -7,8 +7,9 @@ import (
 
 	"github.com/Flicster/peerchat/internal/app/model"
 	"github.com/Flicster/peerchat/internal/app/storage"
-	"github.com/libp2p/go-libp2p-core/peer"
+
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 const (
@@ -68,7 +69,7 @@ func NewChatRoom(p2phost *P2P, username string, room string) (*ChatRoom, error) 
 
 		RoomName: room,
 		UserName: username,
-		peerId:   p2phost.Host.ID(),
+		peerId:   p2phost.GetPeerID(),
 	}
 
 	go chatroom.SubLoop()

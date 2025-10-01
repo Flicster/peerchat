@@ -36,7 +36,6 @@ func main() {
 	username := flag.String("user", "", "username to use in the chatroom.")
 	chatroom := flag.String("room", "", "chatroom to join.")
 	loglevel := flag.String("log", "", "level of logs to print.")
-	discovery := flag.String("discover", "", "method to use for discovery.")
 
 	flag.Parse()
 
@@ -65,27 +64,25 @@ func main() {
 	fmt.Println("This may take upto 30 seconds.")
 	fmt.Println()
 
-	p2phost := service.NewP2P()
-	logrus.Debugln("Completed P2P Setup")
-
-	fmt.Println("Completed P2P Setup.")
-	fmt.Println("Connecting to Service Peers...")
-
-	switch *discovery {
-	case "announce":
-		p2phost.AnnounceConnect()
-	case "advertise":
-		p2phost.AdvertiseConnect()
-	default:
-		p2phost.AdvertiseConnect()
-	}
-
-	chatapp, err := service.NewChatRoom(p2phost, *username, *chatroom)
+	p2p, err := service.NewP2P()
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	ui := service.NewUI(chatapp)
+	fmt.Println("Completed P2P Setup.")
+	fmt.Println("Connecting to Service Peers...")
+
+	err = p2p.AdvertiseConnect()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	chat, err := service.NewChatRoom(p2p, *username, *chatroom)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	ui := service.NewUI(chat)
 	if err = ui.Run(); err != nil {
 		logrus.Fatal(err)
 	}

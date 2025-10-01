@@ -216,7 +216,7 @@ func (ui *UI) start() {
 		case msg := <-ui.MsgInputs:
 			m := model.ChatMessage{
 				Message:    msg,
-				SenderID:   ui.ChatRoom.peerId.Pretty(),
+				SenderID:   ui.ChatRoom.peerId.String(),
 				SenderName: ui.ChatRoom.UserName,
 				CreatedAt:  time.Now(),
 			}
@@ -316,7 +316,7 @@ func (ui *UI) syncPeerBox() {
 	ui.peerBox.Unlock()
 
 	for _, p := range peers {
-		peerId := p.Pretty()
+		peerId := p.String()
 		if len(peerId) > 8 {
 			peerId = peerId[len(peerId)-8:]
 		}
