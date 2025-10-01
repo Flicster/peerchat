@@ -49,10 +49,10 @@ func NewUI(cr *ChatRoom) *UI {
 	messagebox := tview.NewTextView()
 	messagebox.
 		SetDynamicColors(true).
-		SetScrollable(true).
 		SetChangedFunc(func() {
-			app.Draw()
-			messagebox.ScrollToEnd()
+			app.QueueUpdateDraw(func() {
+				messagebox.ScrollToEnd()
+			})
 		}).
 		SetBorder(true).
 		SetBorderColor(tcell.ColorGreen).
@@ -108,7 +108,7 @@ func NewUI(cr *ChatRoom) *UI {
 
 	peerbox := tview.NewTextView().
 		SetChangedFunc(func() {
-			app.Draw()
+			app.QueueUpdateDraw(func() {})
 		})
 	peerbox.
 		SetBorder(true).
@@ -159,7 +159,7 @@ func NewUI(cr *ChatRoom) *UI {
 	flex := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(titlebox, 3, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(messagebox, 0, 1, false). // Убедитесь, что messagebox не в фокусе по умолчанию
+			AddItem(messagebox, 0, 1, false).
 			AddItem(peerbox, 20, 1, false),
 			0, 8, false).
 		AddItem(input, 3, 1, true).
@@ -177,7 +177,7 @@ func NewUI(cr *ChatRoom) *UI {
 		return event
 	})
 
-	app.SetRoot(flex, true)
+	app.SetRoot(flex, true).SetFocus(input)
 
 	return &UI{
 		ChatRoom:    cr,
@@ -224,11 +224,19 @@ func (ui *UI) start() {
 		case cmd := <-ui.CmdInputs:
 			go ui.handleCommand(cmd)
 		case msg := <-ui.ChatRoom.Inbound:
-			ui.displayMessage(msg)
+			m := msg
+			ui.TerminalApp.QueueUpdateDraw(func() {
+				ui.displayMessage(m)
+			})
 		case log := <-ui.ChatRoom.Logs:
-			ui.displayLogMessage(log)
+			l := log
+			ui.TerminalApp.QueueUpdateDraw(func() {
+				ui.displayLogMessage(l)
+			})
 		case <-ticker.C:
-			ui.syncPeerBox()
+			ui.TerminalApp.QueueUpdateDraw(func() {
+				ui.syncPeerBox()
+			})
 		}
 	}
 }
@@ -239,7 +247,9 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 		ui.TerminalApp.Stop()
 		return
 	case "/clear":
-		ui.messageBox.Clear()
+		ui.TerminalApp.QueueUpdateDraw(func() {
+			ui.messageBox.Clear()
+		})
 	case "/room":
 		if cmd.Arg == "" {
 			ui.Logs <- model.LogMessage{Prefix: "system", Message: "missing room name for command"}
@@ -257,7 +267,9 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 			return
 		} else {
 			ui.UpdateUser(cmd.Arg)
-			ui.inputBox.SetLabel(ui.UserName + " > ")
+			ui.TerminalApp.QueueUpdateDraw(func() {
+				ui.inputBox.SetLabel(ui.UserName + " > ")
+			})
 		}
 	default:
 		ui.Logs <- model.LogMessage{Prefix: "system", Message: fmt.Sprintf("unsupported command - %s", cmd.Type)}
@@ -307,13 +319,10 @@ func (ui *UI) printMessage(msg model.ChatMessage, color string) {
 	}
 }
 
-// syncPeerBox refreshes the list of peers
 func (ui *UI) syncPeerBox() {
 	peers := ui.PeerList()
 
-	ui.peerBox.Lock()
 	ui.peerBox.Clear()
-	ui.peerBox.Unlock()
 
 	for _, p := range peers {
 		peerId := p.String()
@@ -334,9 +343,11 @@ func (ui *UI) changeRoom(roomName string) {
 	ui.ChatRoom = newChatRoom
 	time.Sleep(time.Second * 1)
 
-	ui.messageBox.Clear()
-	ui.messageBox.SetTitle(fmt.Sprintf("ChatRoom-%s", ui.ChatRoom.RoomName))
-	ui.displayHistory()
+	ui.TerminalApp.QueueUpdateDraw(func() {
+		ui.messageBox.Clear()
+		ui.messageBox.SetTitle(fmt.Sprintf("ChatRoom-%s", ui.ChatRoom.RoomName))
+		ui.displayHistory()
+	})
 
 	oldChatRoom.Exit()
 }
