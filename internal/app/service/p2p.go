@@ -15,6 +15,7 @@ import (
 	discovery "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 const serviceName = "peerchat"
@@ -95,7 +96,7 @@ func (p *P2P) AdvertiseConnect() error {
 	if err != nil {
 		return fmt.Errorf("find peers: %w", err)
 	}
-	go handlePeerDiscovery(p.Host, peerCh)
+	go p.handlePeerDiscovery(peerCh)
 	return nil
 }
 
@@ -106,17 +107,31 @@ func (p *P2P) GetPeerID() peer.ID {
 	return p.Host.ID()
 }
 
-func handlePeerDiscovery(node host.Host, peerCh <-chan peer.AddrInfo) {
+func (p *P2P) handlePeerDiscovery(peerCh <-chan peer.AddrInfo) error {
+	g, ctx := errgroup.WithContext(p.Ctx)
+	g.SetLimit(5)
+
 	for pi := range peerCh {
-		if pi.ID == node.ID() {
+		if pi.ID == p.Host.ID() || len(pi.Addrs) == 0 {
 			continue
 		}
-		go func(pi peer.AddrInfo) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		peerInfo := pi
+
+		g.Go(func() error {
+			connectCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
-			if err := node.Connect(ctx, pi); err != nil {
-				logrus.WithError(err).WithFields(logrus.Fields{"peer": pi.ID.String()}).Debug("failed to connect peer")
+
+			if err := p.Host.Connect(connectCtx, peerInfo); err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"peer": peerInfo.ID.String(),
+				}).Debug("failed to connect peer")
+				return nil
 			}
-		}(pi)
+
+			logrus.WithField("peer", peerInfo.ID.String()).Debug("connected peer")
+			return nil
+		})
 	}
+	return g.Wait()
 }
