@@ -8,7 +8,7 @@ require (
 	github.com/libp2p/go-libp2p-kad-dht v0.35.0
 	github.com/libp2p/go-libp2p-pubsub v0.15.0
 	github.com/rivo/tview v0.0.0-20210608105643-d4fb0348227b
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.9.3
 )
 
 require (
