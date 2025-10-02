@@ -244,6 +244,11 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 		ui.TerminalApp.Stop()
 		return
 	case "/clear":
+		err := ui.ChatRoom.ClearHistory()
+		if err != nil {
+			ui.Logs <- model.LogMessage{Prefix: "system", Message: "failed to clear history: " + err.Error()}
+			return
+		}
 		ui.TerminalApp.QueueUpdateDraw(func() {
 			ui.messageBox.Clear()
 		})

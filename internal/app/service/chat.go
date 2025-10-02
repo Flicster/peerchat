@@ -146,6 +146,10 @@ func (cr *ChatRoom) LoadHistory() error {
 	return nil
 }
 
+func (cr *ChatRoom) ClearHistory() error {
+	return cr.storage.Clear()
+}
+
 func (cr *ChatRoom) Exit() {
 	defer cr.cancel()
 	_ = cr.storage.Close()

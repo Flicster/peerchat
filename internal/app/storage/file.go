@@ -88,6 +88,10 @@ func (s *File) LoadMessages() ([]model.ChatMessage, error) {
 	return result, nil
 }
 
+func (s *File) Clear() error {
+	return os.Truncate(s.filename, 0)
+}
+
 func (s *File) Close() error {
 	if err := s.writer.Flush(); err != nil {
 		return err
