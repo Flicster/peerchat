@@ -48,6 +48,12 @@ The **PeerChat** applcation can be installed in one of two ways.
     sudo chmod +x peerchat
     ./peerchat
     ```
+    *For Mac*
+    ```
+    sudo chmod +x peerchat
+    xattr -d com.apple.quarantine ./peerchat
+    ./peerchat
+    ```
 
 2. **With Go**
     - This method requires Go v1.24 or greater installed on the target system. [Install Go](https://golang.org/doc/install)
@@ -80,17 +86,20 @@ The **PeerChat** applcation can be installed in one of two ways.
     peerchat
 
 ## Usage
-When the **PeerChat** application is invoked without any flags, it joins the *lobby* chat room as a user named *newuser*. This can be modified by passing the ``-user`` and ``-room`` flags.
+When the **PeerChat** application is invoked without any flags, it joins the *lobby* chat room as a user named *incognito*. This can be modified by passing the ``-user`` and ``-room`` flags.
 
 The following starts the application and joins the *mychatroom* chat room as a user named *hero*.
 ```
 peerchat -user hero -room mychatroom
 ```
 
-The method of peer discovery method can be modified using the ``-discover`` flag. Valid values are *announce* and *advertise*. The application defaults to the *advertise*. This value should only changed if peer connections aren't being established with the default method.
+**The chat history will be stored only in the local storage, in the home directory at .peerchat/{room}.log.**
+You can remove it any time by removing file or call command in chat
+```
+/clear
+```
 
 The loglevel for the application startup runtime can be modified using the ``-log`` flag. Valid values are *trace*, *debug*, *info*, *warn*, *error*, *fatal* and *panic*. The application defaults to *info*. This value is meant for development and debuggin only.
-
 
 ## Future Development
 - Encryption
