@@ -14,7 +14,7 @@ import (
 
 const (
 	appVersion = "v1.0.0"
-	osDarwin   = "darwin"
+	osLinux    = "linux"
 )
 
 type uiCommand struct {
@@ -98,7 +98,7 @@ func NewUI(cr *ChatRoom) *UI {
 
 	inputPlaceholder := "Write message here...(Alt+Enter to send)"
 	usageControlText := "[yellow]Alt+Enter[green] - send message | [yellow]Tab[green] - change focus to scroll messages and back"
-	if runtime.GOOS == osDarwin {
+	if runtime.GOOS != osLinux {
 		usageControlText = "[yellow]Ctrl+S[green] - send message | [yellow]Tab[green] - change focus to scroll messages and back"
 		inputPlaceholder = "Write message here...(Ctrl+S to send)"
 	}
@@ -138,8 +138,8 @@ func NewUI(cr *ChatRoom) *UI {
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch {
-		case (event.Key() == tcell.KeyEnter && event.Modifiers() == tcell.ModAlt) ||
-			(runtime.GOOS == osDarwin && event.Key() == tcell.KeyCtrlS):
+		case (runtime.GOOS != osLinux && event.Key() == tcell.KeyCtrlS) ||
+			(runtime.GOOS == osLinux && event.Key() == tcell.KeyEnter && event.Modifiers() == tcell.ModAlt):
 			line := input.GetText()
 			if len(strings.TrimSpace(line)) == 0 {
 				input.SetText("", true)
