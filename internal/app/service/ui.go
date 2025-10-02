@@ -96,7 +96,8 @@ func NewUI(cr *ChatRoom) *UI {
 
 	usage := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText(`[red]/quit[green] - quit the chat | [red]/room <roomname>[green] - change chat room | [red]/user <username>[green] - change user name | [red]/clear[green] - clear the chat`)
+		SetText(`[yellow]Al+Enter[green] - send message | [yellow]Tab[green] - change focus to scroll messages and back
+[red]/quit[green] - quit the chat | [red]/room <roomname>[green] - change chat room | [red]/user <username>[green] - change user name | [red]/clear[green] - clear the chat`)
 
 	usage.
 		SetTitle("Usage").
@@ -159,7 +160,7 @@ func NewUI(cr *ChatRoom) *UI {
 			AddItem(peerbox, 20, 1, false),
 			0, 8, false).
 		AddItem(input, 0, 2, true).
-		AddItem(usage, 3, 1, false)
+		AddItem(usage, 4, 1, false)
 
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyTab {
