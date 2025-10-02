@@ -28,7 +28,7 @@ type UI struct {
 
 	peerBox    *tview.TextView
 	messageBox *tview.TextView
-	inputBox   *tview.InputField
+	inputBox   *tview.TextArea
 }
 
 func NewUI(cr *ChatRoom) *UI {
@@ -99,11 +99,11 @@ func NewUI(cr *ChatRoom) *UI {
 		SetText(`[red]/quit[green] - quit the chat | [red]/room <roomname>[green] - change chat room | [red]/user <username>[green] - change user name | [red]/clear[green] - clear the chat`)
 
 	usage.
-		SetBorder(true).
-		SetBorderColor(tcell.ColorGreen).
 		SetTitle("Usage").
 		SetTitleAlign(tview.AlignLeft).
 		SetTitleColor(tcell.ColorWhite).
+		SetBorder(true).
+		SetBorderColor(tcell.ColorGreen).
 		SetBorderPadding(0, 0, 1, 0)
 
 	peerbox := tview.NewTextView().
@@ -117,43 +117,39 @@ func NewUI(cr *ChatRoom) *UI {
 		SetTitleAlign(tview.AlignLeft).
 		SetTitleColor(tcell.ColorWhite)
 
-	input := tview.NewInputField().
-		SetLabel(cr.UserName + " > ").
-		SetLabelColor(tcell.ColorGreen).
-		SetFieldWidth(0).
-		SetFieldBackgroundColor(tcell.ColorBlack)
-
-	input.SetBorder(true).
-		SetBorderColor(tcell.ColorGreen).
-		SetTitle("Input").
+	input := tview.NewTextArea()
+	input.SetText("", true).
+		SetPlaceholder("Write message here...(Alt+Enter to send)").
+		SetTitle(cr.UserName+" > ").
 		SetTitleAlign(tview.AlignLeft).
 		SetTitleColor(tcell.ColorWhite).
+		SetBorder(true).
+		SetBorderColor(tcell.ColorGreen).
 		SetBorderPadding(0, 0, 1, 0)
 
-	input.SetDoneFunc(func(key tcell.Key) {
-		if key != tcell.KeyEnter {
-			return
-		}
-
-		line := input.GetText()
-		if len(line) == 0 {
-			return
-		}
-
-		line = strings.ReplaceAll(line, "\\n", "\n")
-		if strings.HasPrefix(line, "/") {
-			cmdparts := strings.Split(line, " ")
-			if len(cmdparts) == 1 {
-				cmdparts = append(cmdparts, "")
+	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch {
+		case event.Key() == tcell.KeyEnter && event.Modifiers() == tcell.ModAlt:
+			line := input.GetText()
+			if len(strings.TrimSpace(line)) == 0 {
+				input.SetText("", true)
+				return nil
 			}
 
-			cmdchan <- uiCommand{Type: cmdparts[0], Arg: cmdparts[1]}
+			if strings.HasPrefix(line, "/") {
+				cmdparts := strings.SplitN(line, " ", 2)
+				if len(cmdparts) == 1 {
+					cmdparts = append(cmdparts, "")
+				}
+				cmdchan <- uiCommand{Type: cmdparts[0], Arg: cmdparts[1]}
+			} else {
+				msgchan <- line
+			}
 
-		} else {
-			msgchan <- line
+			input.SetText("", true)
+			return nil
 		}
-
-		input.SetText("")
+		return event
 	})
 
 	flex := tview.NewFlex().SetDirection(tview.FlexRow).
@@ -162,7 +158,7 @@ func NewUI(cr *ChatRoom) *UI {
 			AddItem(messagebox, 0, 1, false).
 			AddItem(peerbox, 20, 1, false),
 			0, 8, false).
-		AddItem(input, 3, 1, true).
+		AddItem(input, 0, 2, true).
 		AddItem(usage, 3, 1, false)
 
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
