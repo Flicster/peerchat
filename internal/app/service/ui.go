@@ -138,8 +138,8 @@ func NewUI(cr *ChatRoom) *UI {
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch {
-		case (runtime.GOOS != osLinux && event.Key() == tcell.KeyCtrlS) ||
-			(runtime.GOOS == osLinux && event.Key() == tcell.KeyEnter && event.Modifiers() == tcell.ModAlt):
+		case event.Key() == tcell.KeyCtrlS ||
+			event.Key() == tcell.KeyEnter && event.Modifiers() == tcell.ModAlt:
 			line := input.GetText()
 			if len(strings.TrimSpace(line)) == 0 {
 				input.SetText("", true)
