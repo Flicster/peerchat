@@ -264,7 +264,7 @@ func (ui *UI) handleCommand(cmd uiCommand) {
 		} else {
 			ui.UpdateUser(cmd.Arg)
 			ui.TerminalApp.QueueUpdateDraw(func() {
-				ui.inputBox.SetLabel(ui.UserName + " > ")
+				ui.inputBox.SetTitle(ui.UserName + " > ")
 			})
 		}
 	default:
@@ -315,6 +315,11 @@ func (ui *UI) printMessage(msg model.ChatMessage, color string) {
 	}
 }
 
+func (ui *UI) printDate(t time.Time) {
+	indent := strings.Repeat(" ", len(t.Format(time.TimeOnly))+1)
+	fmt.Fprintf(ui.messageBox, "%s[lightslategrey]%s[-]\n", indent, t.Format("Mon, 02 Jan 2006"))
+}
+
 func (ui *UI) syncPeerBox() {
 	peers := ui.PeerList()
 
@@ -349,7 +354,12 @@ func (ui *UI) changeRoom(roomName string) {
 }
 
 func (ui *UI) displayHistory() {
+	var prevDay time.Time
 	for _, msg := range ui.ChatRoom.History {
+		if prevDay.IsZero() || prevDay.Day() < msg.CreatedAt.Day() {
+			prevDay = msg.CreatedAt
+			ui.printDate(prevDay)
+		}
 		if msg.SenderName == ui.ChatRoom.UserName {
 			ui.displayOwnerMessage(msg)
 		} else {
