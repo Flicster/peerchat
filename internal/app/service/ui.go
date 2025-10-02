@@ -226,6 +226,9 @@ func (ui *UI) start() {
 				SenderName: ui.ChatRoom.UserName,
 				CreatedAt:  time.Now(),
 			}
+			ui.TerminalApp.QueueUpdateDraw(func() {
+				ui.displayMessage(m)
+			})
 			ui.Outbound <- m
 		case cmd := <-ui.CmdInputs:
 			go ui.handleCommand(cmd)

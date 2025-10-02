@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/Flicster/peerchat/internal/app/model"
 	"github.com/Flicster/peerchat/internal/app/storage"
@@ -122,6 +123,9 @@ func (cr *ChatRoom) SubLoop() {
 				cr.Logs <- model.LogMessage{Prefix: "system", Message: "subscription has closed"}
 				return
 			}
+			if message.ReceivedFrom == cr.peerId {
+				continue
+			}
 			cm := &model.ChatMessage{}
 			err = json.Unmarshal(message.Data, cm)
 			if err != nil {
@@ -158,5 +162,9 @@ func (cr *ChatRoom) Exit() {
 }
 
 func (cr *ChatRoom) UpdateUser(username string) {
+	username = strings.ReplaceAll(username, " ", "")
+	username = strings.ReplaceAll(username, "\t", "")
+	username = strings.ReplaceAll(username, "\n", "")
+	username = strings.ReplaceAll(username, "\r", "")
 	cr.UserName = username
 }
