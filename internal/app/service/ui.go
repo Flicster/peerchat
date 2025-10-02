@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 const (
 	appVersion = "v1.0.0"
+	osDarwin   = "darwin"
 )
 
 type uiCommand struct {
@@ -94,10 +96,16 @@ func NewUI(cr *ChatRoom) *UI {
 			}
 		})
 
+	inputPlaceholder := "Write message here...(Alt+Enter to send)"
+	usageControlText := "[yellow]Alt+Enter[green] - send message | [yellow]Tab[green] - change focus to scroll messages and back"
+	if runtime.GOOS == osDarwin {
+		usageControlText = "[yellow]Ctrl+S[green] - send message | [yellow]Tab[green] - change focus to scroll messages and back"
+		inputPlaceholder = "Write message here...(Ctrl+S to send)"
+	}
 	usage := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText(`[yellow]Al+Enter[green] - send message | [yellow]Tab[green] - change focus to scroll messages and back
-[red]/quit[green] - quit the chat | [red]/room <roomname>[green] - change chat room | [red]/user <username>[green] - change user name | [red]/clear[green] - clear the chat`)
+		SetText(fmt.Sprintf(`%s
+[red]/quit[green] - quit the chat | [red]/room <roomname>[green] - change chat room | [red]/user <username>[green] - change user name | [red]/clear[green] - clear the chat`, usageControlText))
 
 	usage.
 		SetTitle("Usage").
@@ -120,7 +128,7 @@ func NewUI(cr *ChatRoom) *UI {
 
 	input := tview.NewTextArea()
 	input.SetText("", true).
-		SetPlaceholder("Write message here...(Alt+Enter to send)").
+		SetPlaceholder(inputPlaceholder).
 		SetTitle(cr.UserName+" > ").
 		SetTitleAlign(tview.AlignLeft).
 		SetTitleColor(tcell.ColorWhite).
@@ -130,7 +138,8 @@ func NewUI(cr *ChatRoom) *UI {
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch {
-		case event.Key() == tcell.KeyEnter && event.Modifiers() == tcell.ModAlt:
+		case (event.Key() == tcell.KeyEnter && event.Modifiers() == tcell.ModAlt) ||
+			(runtime.GOOS == osDarwin && event.Key() == tcell.KeyCtrlS):
 			line := input.GetText()
 			if len(strings.TrimSpace(line)) == 0 {
 				input.SetText("", true)
